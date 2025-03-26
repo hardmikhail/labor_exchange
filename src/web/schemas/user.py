@@ -1,11 +1,11 @@
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, EmailStr, constr, model_validator
+from pydantic import BaseModel, EmailStr, StringConstraints, model_validator
 from typing_extensions import Self
 
 
 class UserSchema(BaseModel):
-    id: Optional[int] = None
+    id: int
     name: str
     email: EmailStr
     is_company: bool
@@ -20,14 +20,12 @@ class UserUpdateSchema(BaseModel):
 class UserCreateSchema(BaseModel):
     name: str
     email: EmailStr
-    password: constr(min_length=8)
+    password: Annotated[str, StringConstraints(min_length=8, max_length=32)]
     password2: str
     is_company: bool = False
 
     @model_validator(mode="after")
     def password_match(self) -> Self:
-        pw1 = self.password
-        pw2 = self.password2
-        if pw1 is not None and pw2 is not None and pw1 != pw2:
-            raise ValueError("passwords do not match")
+        if self.password != self.password2:
+            raise ValueError("Пароли не совпадают")
         return self
