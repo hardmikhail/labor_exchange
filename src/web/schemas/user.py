@@ -1,7 +1,7 @@
 from typing import Annotated, Optional
 
 from pydantic import BaseModel, EmailStr, StringConstraints, model_validator
-from typing_extensions import Self
+from typing import Self
 
 
 class UserSchema(BaseModel):
