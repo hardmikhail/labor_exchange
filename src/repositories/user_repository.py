@@ -9,6 +9,7 @@ from models import Job as JobModel
 from models import Response as ResponseModel
 from models import User as UserModel
 from storage.sqlalchemy.tables import User
+from tools import update_fields
 from web.schemas import UserCreateSchema, UserUpdateSchema
 
 
@@ -29,7 +30,7 @@ class UserRepository(IRepositoryAsync):
             await session.commit()
             await session.refresh(user)
 
-        return self.__to_user_model(user_from_db=user, include_relations=False)
+        return self.__to_user_model(user_from_db=user)
 
     async def retrieve(self, include_relations: bool = False, **kwargs) -> UserModel:
         async with self.session() as session:
@@ -72,25 +73,13 @@ class UserRepository(IRepositoryAsync):
             if not user_from_db:
                 raise ValueError("Пользователь не найден")
 
-            name = user_update_dto.name if user_update_dto.name is not None else user_from_db.name
-            email = (
-                user_update_dto.email if user_update_dto.email is not None else user_from_db.email
-            )
-            is_company = (
-                user_update_dto.is_company
-                if user_update_dto.is_company is not None
-                else user_from_db.is_company
-            )
+            updated_user = update_fields(user_update_dto.model_dump(), user_from_db)
 
-            user_from_db.name = name
-            user_from_db.email = email
-            user_from_db.is_company = is_company
-
-            session.add(user_from_db)
+            session.add(updated_user)
             await session.commit()
-            await session.refresh(user_from_db)
+            await session.refresh(updated_user)
 
-        new_user = self.__to_user_model(user_from_db, include_relations=False)
+        new_user = self.__to_user_model(user_from_db)
         return new_user
 
     async def delete(self, id: int):
@@ -105,7 +94,7 @@ class UserRepository(IRepositoryAsync):
             else:
                 raise ValueError("Пользователь не найден")
 
-        return self.__to_user_model(user_from_db, include_relations=False)
+        return self.__to_user_model(user_from_db)
 
     @staticmethod
     def __to_user_model(user_from_db: User, include_relations: bool = False) -> UserModel:
