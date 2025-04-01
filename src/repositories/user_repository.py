@@ -2,12 +2,14 @@ from contextlib import AbstractContextManager
 from typing import Callable
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from interfaces import IRepositoryAsync
 from models import Job as JobModel
 from models import Response as ResponseModel
 from models import User as UserModel
+from repositories.exceptions import EntityNotFoundError, UniqueError
 from storage.sqlalchemy.tables import User
 from tools import update_fields
 from web.schemas import UserCreateSchema, UserUpdateSchema
@@ -18,19 +20,25 @@ class UserRepository(IRepositoryAsync):
         self.session = session
 
     async def create(self, user_create_dto: UserCreateSchema, hashed_password: str) -> UserModel:
-        async with self.session() as session:
-            user = User(
-                name=user_create_dto.name,
-                email=user_create_dto.email,
-                is_company=user_create_dto.is_company,
-                hashed_password=hashed_password,
-            )
+        try:
+            async with self.session() as session:
+                user = User(
+                    name=user_create_dto.name,
+                    email=user_create_dto.email,
+                    is_company=user_create_dto.is_company,
+                    hashed_password=hashed_password,
+                )
 
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
+                session.add(user)
+                await session.commit()
+                await session.refresh(user)
 
-        return self.__to_user_model(user_from_db=user)
+            return self.__to_user_model(user_from_db=user)
+
+        except IntegrityError as e:
+            raise UniqueError("Пользователь с таким email уже существует") from e
+        except Exception:
+            raise
 
     async def retrieve(self, include_relations: bool = False, **kwargs) -> UserModel:
         async with self.session() as session:
@@ -71,7 +79,7 @@ class UserRepository(IRepositoryAsync):
             user_from_db = res.scalars().first()
 
             if not user_from_db:
-                raise ValueError("Пользователь не найден")
+                raise EntityNotFoundError("Пользователь не найден")
 
             updated_user = update_fields(user_update_dto.model_dump(), user_from_db)
 
@@ -80,6 +88,7 @@ class UserRepository(IRepositoryAsync):
             await session.refresh(updated_user)
 
         new_user = self.__to_user_model(user_from_db)
+
         return new_user
 
     async def delete(self, id: int):
@@ -92,7 +101,7 @@ class UserRepository(IRepositoryAsync):
                 await session.delete(user_from_db)
                 await session.commit()
             else:
-                raise ValueError("Пользователь не найден")
+                raise EntityNotFoundError("Пользователь не найден")
 
         return self.__to_user_model(user_from_db)
 

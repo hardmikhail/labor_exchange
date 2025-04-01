@@ -2,15 +2,15 @@ from contextlib import AbstractContextManager
 from typing import Callable
 
 from sqlalchemy import select
-from interfaces import IRepositoryAsync
 from sqlalchemy.orm import Session, selectinload
 
+from interfaces import IRepositoryAsync
 from models import Job as JobModel
 from models import Response as ResponseModel
+from repositories.exceptions import EntityNotFoundError
 from storage.sqlalchemy.tables import Job
 from tools import update_fields
 from web.schemas import JobCreateSchema
-
 
 
 class JobRepository(IRepositoryAsync):
@@ -65,7 +65,7 @@ class JobRepository(IRepositoryAsync):
             jobs_model.append(model)
 
         return jobs_model
-        
+
     async def update(self, id: int, job_update_dto: JobCreateSchema) -> JobModel:
         async with self.session() as session:
             query = select(Job).filter_by(id=id).limit(1)
@@ -73,8 +73,8 @@ class JobRepository(IRepositoryAsync):
             job_from_db = res.scalars().first()
 
             if not job_from_db:
-                raise ValueError("Вакансия не найдена")
-            
+                raise EntityNotFoundError("Вакансия не найдена")
+
             updated_job = update_fields(job_update_dto.model_dump(), job_from_db)
 
             session.add(updated_job)
@@ -83,7 +83,7 @@ class JobRepository(IRepositoryAsync):
 
         new_job = self.__to_job_model(job_from_db)
         return new_job
-    
+
     async def delete(self, id: int):
         async with self.session() as session:
             query = select(Job).filter_by(id=id).limit(1)
@@ -91,13 +91,13 @@ class JobRepository(IRepositoryAsync):
             job_from_db = res.scalars.first()
 
             if not job_from_db:
-                raise ValueError("Вакансия не найдена")
+                raise EntityNotFoundError("Вакансия не найдена")
             else:
                 await session.delete(job_from_db)
                 await session.commit()
-            
+
         return self.__to_job_model(job_from_db)
-    
+
     @staticmethod
     def __to_job_model(job_from_db: Job, include_relations: bool = False) -> JobModel:
         job_responses = []
@@ -105,8 +105,10 @@ class JobRepository(IRepositoryAsync):
 
         if job_from_db:
             if include_relations:
-                job_responses = [ResponseModel(id=response.id) for response in job_from_db.responses]
-            
+                job_responses = [
+                    ResponseModel(id=response.id) for response in job_from_db.responses
+                ]
+
             job_model = JobModel(
                 id=job_from_db.id,
                 user_id=job_from_db.user_id,
@@ -115,7 +117,7 @@ class JobRepository(IRepositoryAsync):
                 salary_from=job_from_db.salary_from,
                 salary_to=job_from_db.salary_to,
                 is_active=job_from_db.is_active,
-                responses=job_responses
+                responses=job_responses,
             )
 
         return job_model
