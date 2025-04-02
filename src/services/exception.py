@@ -4,3 +4,7 @@ class UserAlreadyExistsError(Exception):
 
 class UserNotFoundError(Exception):
     """Пользователь не найден"""
+
+
+class JobNotFoundError(Exception):
+    """Вакансия не найдена"""
