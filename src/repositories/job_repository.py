@@ -6,10 +6,9 @@ from sqlalchemy.orm import Session, selectinload
 
 from interfaces import IRepositoryAsync
 from models import Job as JobModel
-from models import Response as ResponseModel
 from repositories.exceptions import EntityNotFoundError
 from storage.sqlalchemy.tables import Job
-from tools import update_fields
+from tools import to_model, update_fields
 from web.schemas import JobCreateSchema
 
 
@@ -32,7 +31,7 @@ class JobRepository(IRepositoryAsync):
             await session.commit()
             await session.refresh(job)
 
-        return self.__to_job_model(job_from_db=job)
+        return to_model(job, JobModel)
 
     async def retrieve(self, include_relations: bool = False, **kwargs) -> JobModel:
         async with self.session() as session:
@@ -43,10 +42,7 @@ class JobRepository(IRepositoryAsync):
             res = await session.execute(query)
             job_from_db = res.scalars().first()
 
-        job_model = self.__to_job_model(
-            job_from_db=job_from_db, include_relations=include_relations
-        )
-        return job_model
+        return to_model(job_from_db, JobModel)
 
     async def retrieve_many(
         self, limit: int = 100, skip: int = 0, include_relations: bool = False
@@ -61,7 +57,7 @@ class JobRepository(IRepositoryAsync):
 
         jobs_model = []
         for job in jobs_from_db:
-            model = self.__to_job_model(job_from_db=job, include_relations=include_relations)
+            model = to_model(job, JobModel)
             jobs_model.append(model)
 
         return jobs_model
@@ -81,8 +77,7 @@ class JobRepository(IRepositoryAsync):
             await session.commit()
             await session.refresh(updated_job)
 
-        new_job = self.__to_job_model(job_from_db)
-        return new_job
+        return to_model(job_from_db, JobModel)
 
     async def delete(self, id: int):
         async with self.session() as session:
@@ -96,28 +91,4 @@ class JobRepository(IRepositoryAsync):
                 await session.delete(job_from_db)
                 await session.commit()
 
-        return self.__to_job_model(job_from_db)
-
-    @staticmethod
-    def __to_job_model(job_from_db: Job, include_relations: bool = False) -> JobModel:
-        job_responses = []
-        job_model = None
-
-        if job_from_db:
-            if include_relations:
-                job_responses = [
-                    ResponseModel(id=response.id) for response in job_from_db.responses
-                ]
-
-            job_model = JobModel(
-                id=job_from_db.id,
-                user_id=job_from_db.user_id,
-                title=job_from_db.title,
-                description=job_from_db.description,
-                salary_from=job_from_db.salary_from,
-                salary_to=job_from_db.salary_to,
-                is_active=job_from_db.is_active,
-                responses=job_responses,
-            )
-
-        return job_model
+        return to_model(job_from_db, JobModel)

@@ -9,7 +9,7 @@ from interfaces import IRepositoryAsync
 from models import Response as ResponseModel
 from repositories.exceptions import EntityNotFoundError, UniqueError
 from storage.sqlalchemy.tables import Response
-from tools.common import update_fields
+from tools.common import to_model, update_fields
 from web.schemas import ResponseCreateSchema, ResponseUpdateSchema
 
 
@@ -30,7 +30,7 @@ class ResponseRepository(IRepositoryAsync):
                 await session.commit()
                 await session.refresh(response)
 
-            return self.__to_response_model(response_from_db=response)
+            return to_model(response, ResponseModel)
         except IntegrityError as e:
             raise UniqueError("Вы уже откликнулись на эту вакансию") from e
         except Exception:
@@ -42,8 +42,7 @@ class ResponseRepository(IRepositoryAsync):
             res = await session.execute(query)
             response_from_db = res.scalars().first()
 
-        response_model = self.__to_response_model(response_from_db=response_from_db)
-        return response_model
+        return to_model(response_from_db, ResponseModel)
 
     async def retrieve_many(self, limit: int = 100, skip: int = 0, **kwargs) -> list[ResponseModel]:
         async with self.session() as session:
@@ -53,7 +52,7 @@ class ResponseRepository(IRepositoryAsync):
 
         responses_model = []
         for response in response_from_db:
-            model = self.__to_response_model(response_from_db=response)
+            model = to_model(response_from_db, ResponseModel)
             responses_model.append(model)
 
         return responses_model
@@ -73,8 +72,7 @@ class ResponseRepository(IRepositoryAsync):
             await session.commit()
             await session.refresh(updated_response)
 
-        new_response = self.__to_response_model(response_from_db=response_from_db)
-        return new_response
+        return to_model(response_from_db, ResponseModel)
 
     async def delete(self, id: int):
         async with self.session() as session:
@@ -88,17 +86,4 @@ class ResponseRepository(IRepositoryAsync):
                 await session.delete(response_from_db)
                 await session.commit()
 
-        return self.__to_response_model(response_from_db)
-
-    @staticmethod
-    def __to_response_model(response_from_db: Response) -> ResponseModel:
-        response_model = None
-        if response_from_db:
-            response_model = ResponseModel(
-                id=response_from_db.id,
-                job_id=response_from_db.job_id,
-                user_id=response_from_db.user_id,
-                message=response_from_db.message,
-            )
-
-        return response_model
+        return to_model(response_from_db, ResponseModel)
