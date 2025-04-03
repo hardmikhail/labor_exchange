@@ -1,12 +1,11 @@
+from interfaces.i_repository import IRepositoryAsync
 from repositories.exceptions import EntityNotFoundError
-from repositories.job_repository import JobRepository
-from repositories.user_repository import UserRepository
 from services.exception import JobNotFoundError, UserNotFoundError
 from web.schemas.job import JobCreateSchema
 
 
 class JobService:
-    def __init__(self, job_repository: JobRepository, user_repository: UserRepository):
+    def __init__(self, job_repository: IRepositoryAsync, user_repository: IRepositoryAsync):
         self.job_repository = job_repository
         self.user_repository = user_repository
 
@@ -14,7 +13,7 @@ class JobService:
         try:
             user = await self.user_repository.retrieve(id=job_create_dto.user_id)
         except EntityNotFoundError as e:
-            raise UserNotFoundError(e)
+            raise UserNotFoundError("Пользователь не найден") from e
 
         if not user.is_company:
             raise PermissionError("Содавать вакансии могут только компании")
@@ -25,7 +24,7 @@ class JobService:
         try:
             return await self.job_repository.retrieve(**kwargs)
         except EntityNotFoundError as e:
-            raise JobNotFoundError(e)
+            raise JobNotFoundError("Вакансия не найдена") from e
 
     async def retrieve_many(self, limit: int, skip: int):
         return await self.job_repository.retrieve_many(limit=limit, skip=skip)

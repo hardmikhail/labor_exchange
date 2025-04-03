@@ -1,4 +1,4 @@
-from repositories import UserRepository
+from interfaces.i_repository import IRepositoryAsync
 from repositories.exceptions import EntityNotFoundError, UniqueError
 from services.exception import UserAlreadyExistsError, UserNotFoundError
 from tools.security import hash_password
@@ -7,7 +7,7 @@ from web.schemas.user import UserUpdateSchema
 
 
 class UserService:
-    def __init__(self, user_repository: UserRepository):
+    def __init__(self, user_repository: IRepositoryAsync):
         self.user_repository = user_repository
 
     async def create(self, user_create_dto: UserCreateSchema):
@@ -16,7 +16,7 @@ class UserService:
                 user_create_dto, hashed_password=hash_password(user_create_dto.password)
             )
         except UniqueError as e:
-            raise UserAlreadyExistsError(e)
+            raise UserAlreadyExistsError("Пользователь уже существует в системе") from e
 
     async def retrieve(self, **kwargs):
         return await self.user_repository.retrieve(**kwargs)
@@ -28,10 +28,10 @@ class UserService:
         try:
             return await self.user_repository.update(id=id, user_update_dto=user_update_dto)
         except EntityNotFoundError as e:
-            raise UserNotFoundError(e)
+            raise UserNotFoundError("Пользователь не найден") from e
 
     async def delete(self, id: int):
         try:
             return await self.user_repository.delete(id=id)
         except EntityNotFoundError as e:
-            raise UserNotFoundError(e)
+            raise UserNotFoundError("Пользователь не найден") from e
