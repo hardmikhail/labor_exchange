@@ -46,6 +46,8 @@ class UserRepository(IRepositoryAsync):
 
             res = await session.execute(query)
             user_from_db = res.scalars().first()
+            if not user_from_db:
+                raise EntityNotFoundError("Пользователь не найден")
 
         return to_model(user_from_db, UserModel)
 
