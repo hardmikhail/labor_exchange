@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
-
 from decimal import Decimal
-from models import Response
 
+from models.response import Response
 
 
 @dataclass
