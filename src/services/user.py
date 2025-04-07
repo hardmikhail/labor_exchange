@@ -19,7 +19,10 @@ class UserService:
             raise UserAlreadyExistsError("Пользователь уже существует в системе") from e
 
     async def retrieve(self, **kwargs):
-        return await self.user_repository.retrieve(**kwargs)
+        try:
+            return await self.user_repository.retrieve(**kwargs)
+        except EntityNotFoundError as e:
+            raise UserNotFoundError("Пользователь не найден") from e
 
     async def retrieve_many(self, limit: int, skip: int):
         return await self.user_repository.retrieve_many(limit=limit, skip=skip)

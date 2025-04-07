@@ -8,3 +8,15 @@ class UserNotFoundError(Exception):
 
 class JobNotFoundError(Exception):
     """Вакансия не найдена"""
+
+
+class ResponseAlreadyExistsError(Exception):
+    """Отклик уже существует в системе"""
+
+
+class ResponseCreationError(Exception):
+    """Ошибка создания отклика"""
+
+
+class ResponseNotFoundError(Exception):
+    """Отклик не найден"""
