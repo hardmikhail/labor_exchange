@@ -1,17 +1,12 @@
-import os
-from pathlib import Path
-
 import uvicorn
 from dependency_injector import providers
 from fastapi import FastAPI
 
 from config import DBSettings
-from dependencies.containers import RepositoriesContainer
+from config.common import env_file_path
+from dependencies.containers import RepositoriesContainer, ServicesContainer
 from storage.sqlalchemy.client import SqlAlchemyAsync
-from web.routers import auth_router, user_router
-
-env_file_name = ".env." + os.environ.get("STAGE", "dev")
-env_file_path = Path(__file__).parent.resolve() / env_file_name
+from web.routers import auth_router, job_router, response_router, user_router
 
 
 def create_app():
@@ -25,13 +20,18 @@ def create_app():
             pg_settings=settings,
         ),
     )
+    services_container = ServicesContainer()
+    services_container.init_resources()
+    services_container.repositories_container.override(repo_container)
 
     # инициализация приложения
     app = FastAPI()
-    app.container = repo_container
+    app.container = services_container
 
     app.include_router(auth_router)
     app.include_router(user_router)
+    app.include_router(job_router)
+    app.include_router(response_router)
 
     return app
 
