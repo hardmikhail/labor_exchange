@@ -1,7 +1,7 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from dependencies.containers import RepositoriesContainer
+from dependencies.containers import ServicesContainer
 from repositories import UserRepository
 from tools.security import create_access_token, verify_password
 from web.schemas import LoginSchema, TokenSchema
@@ -9,13 +9,13 @@ from web.schemas import LoginSchema, TokenSchema
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("", response_model=TokenSchema)
+@router.post("", status_code=status.HTTP_201_CREATED)
 @inject
 async def login(
     login_data: LoginSchema,
-    users_repository: UserRepository = Depends(Provide[RepositoriesContainer.user_repository]),
-):
-    user = await users_repository.retrieve(email=login_data.email, include_relations=False)
+    user_service: UserRepository = Depends(Provide[ServicesContainer.user_service]),
+) -> TokenSchema:
+    user = await user_service.retrieve(email=login_data.email, include_relations=False)
 
     if user is None or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
