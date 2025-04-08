@@ -41,6 +41,8 @@ class JobRepository(IRepositoryAsync):
 
             res = await session.execute(query)
             job_from_db = res.scalars().first()
+            if not job_from_db:
+                raise EntityNotFoundError("Вакансия не найдена")
 
         return to_model(job_from_db, JobModel)
 

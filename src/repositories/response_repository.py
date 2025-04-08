@@ -32,7 +32,10 @@ class ResponseRepository(IRepositoryAsync):
 
             return to_model(response, ResponseModel)
         except IntegrityError as e:
-            raise UniqueError("Вы уже откликнулись на эту вакансию") from e
+            if "violates foreign key constraint" in str(e).lower():
+                raise EntityNotFoundError("Связанная запись не найдена") from e
+            elif "violates unique constraint" in str(e).lower():
+                raise UniqueError("Вы уже откликнулись на эту вакансию") from e
         except Exception:
             raise
 
@@ -52,7 +55,7 @@ class ResponseRepository(IRepositoryAsync):
 
         responses_model = []
         for response in response_from_db:
-            model = to_model(response_from_db, ResponseModel)
+            model = to_model(response, ResponseModel)
             responses_model.append(model)
 
         return responses_model
