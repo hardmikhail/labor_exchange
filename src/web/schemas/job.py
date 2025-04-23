@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, model_validator
 
 
 class SalaryValidationMixin:
@@ -23,7 +23,7 @@ class JobSchema(BaseModel):
     is_active: bool
 
 
-class JobUpdateSchema(BaseModel, SalaryValidationMixin):
+class JobCreateSchema(BaseModel, SalaryValidationMixin):
     title: Optional[str] = None
     description: Optional[str] = None
     salary_from: Optional[Decimal] = None
@@ -31,10 +31,5 @@ class JobUpdateSchema(BaseModel, SalaryValidationMixin):
     is_active: Optional[bool] = None
 
 
-class JobCreateSchema(BaseModel, SalaryValidationMixin):
-    user_id: int
-    title: str
-    description: str
-    salary_from: Optional[Decimal] = Field(gt=0)
-    salary_to: Optional[Decimal] = Field(gt=0)
-    is_active: bool = True
+class JobUpdateSchema(JobCreateSchema):
+    pass
