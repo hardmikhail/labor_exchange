@@ -41,7 +41,10 @@ async def read_users(
 async def read_user(
     id: int,
     user_service: UserService = Depends(Provide[ServicesContainer.user_service]),
+    current_user: User = Depends(get_current_user),
 ) -> UserSchema:
+    if id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
     try:
         return await user_service.retrieve(id=id)
     except UserNotFoundError as e:
@@ -61,17 +64,16 @@ async def create_user(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
-@router.put("")
+@router.put("/{id}")
 @inject
 async def update_user(
+    id: int,
     user_update_schema: UserUpdateSchema,
     user_service: UserService = Depends(Provide[ServicesContainer.user_service]),
     current_user: User = Depends(get_current_user),
 ) -> UserSchema:
-
-    existing_user = await user_service.retrieve(email=user_update_schema.email)
-    if existing_user and existing_user.id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Недостаточно прав")
+    if id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
 
     try:
         updated_user = await user_service.update(current_user.id, user_update_schema)
@@ -86,7 +88,10 @@ async def update_user(
 async def delete_user(
     id: int,
     user_service: UserService = Depends(Provide[ServicesContainer.user_service]),
+    current_user: User = Depends(get_current_user),
 ) -> None:
+    if id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
     try:
         await user_service.delete(id=id)
         return

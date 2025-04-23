@@ -16,7 +16,8 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, hash: str) -> bool:
-    return pwd_context.verify(password, hash)
+    if not pwd_context.verify(password, hash):
+        raise ValueError()
 
 
 def create_access_token(data: dict) -> str:
