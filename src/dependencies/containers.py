@@ -38,6 +38,7 @@ class ServicesContainer(containers.DeclarativeContainer):
     job_service = providers.Factory(
         JobService,
         job_repository=repositories_container.job_repository,
+        user_repository=repositories_container.user_repository,
     )
 
     response_service = providers.Factory(

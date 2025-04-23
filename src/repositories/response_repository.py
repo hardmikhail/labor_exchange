@@ -17,12 +17,14 @@ class ResponseRepository(IRepositoryAsync):
     def __init__(self, session: Callable[..., AbstractContextManager[Session]]):
         self.session = session
 
-    async def create(self, response_create_dto: ResponseCreateSchema) -> ResponseModel:
+    async def create(
+        self, user_id: int, job_id: int, response_create_dto: ResponseCreateSchema
+    ) -> ResponseModel:
         try:
             async with self.session() as session:
                 response = Response(
-                    user_id=response_create_dto.user_id,
-                    job_id=response_create_dto.job_id,
+                    user_id=user_id,
+                    job_id=job_id,
                     message=response_create_dto.message,
                 )
 
@@ -44,6 +46,8 @@ class ResponseRepository(IRepositoryAsync):
             query = select(Response).filter_by(**kwargs).limit(1)
             res = await session.execute(query)
             response_from_db = res.scalars().first()
+            if not response_from_db:
+                raise EntityNotFoundError("Отклик не найден")
 
         return to_model(response_from_db, ResponseModel)
 
@@ -60,7 +64,9 @@ class ResponseRepository(IRepositoryAsync):
 
         return responses_model
 
-    async def update(self, id: int, response_update_dto: ResponseUpdateSchema) -> ResponseModel:
+    async def update(
+        self, id: int, user_id: int, response_update_dto: ResponseUpdateSchema
+    ) -> ResponseModel:
         async with self.session() as session:
             query = select(Response).filter_by(id=id).limit(1)
             res = await session.execute(query)
@@ -77,9 +83,9 @@ class ResponseRepository(IRepositoryAsync):
 
         return to_model(response_from_db, ResponseModel)
 
-    async def delete(self, id: int):
+    async def delete(self, id: int, user_id: int):
         async with self.session() as session:
-            query = select(Response).filter_by(id=id).limit(1)
+            query = select(Response).filter_by(id=id, user_id=user_id).limit(1)
             res = await session.execute(query)
             response_from_db = res.scalars().first()
 
@@ -89,4 +95,4 @@ class ResponseRepository(IRepositoryAsync):
                 await session.delete(response_from_db)
                 await session.commit()
 
-        return to_model(response_from_db, ResponseModel)
+        # return to_model(response_from_db, ResponseModel)

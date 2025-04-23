@@ -16,10 +16,10 @@ class JobRepository(IRepositoryAsync):
     def __init__(self, session: Callable[..., AbstractContextManager[Session]]):
         self.session = session
 
-    async def create(self, job_create_dto: JobCreateSchema) -> JobModel:
+    async def create(self, user_id: int, job_create_dto: JobCreateSchema) -> JobModel:
         async with self.session() as session:
             job = Job(
-                user_id=job_create_dto.user_id,
+                user_id=user_id,
                 title=job_create_dto.title,
                 description=job_create_dto.description,
                 salary_from=job_create_dto.salary_from,
@@ -81,11 +81,11 @@ class JobRepository(IRepositoryAsync):
 
         return to_model(job_from_db, JobModel)
 
-    async def delete(self, id: int):
+    async def delete(self, id: int, user_id: int):
         async with self.session() as session:
-            query = select(Job).filter_by(id=id).limit(1)
+            query = select(Job).filter_by(id=id, user_id=user_id).limit(1)
             res = await session.execute(query)
-            job_from_db = res.scalars.first()
+            job_from_db = res.scalars().first()
 
             if not job_from_db:
                 raise EntityNotFoundError("Вакансия не найдена")
