@@ -13,33 +13,47 @@ class ResponseService:
     def __init__(self, response_repository: IRepositoryAsync):
         self.response_repository = response_repository
 
-    async def create(self, response_create_dto: ResponseCreateSchema):
+    async def create(
+        self, user_id: int, job_id: int, is_company: bool, response_create_dto: ResponseCreateSchema
+    ):
+        if is_company:
+            raise PermissionError("Недостаточно прав")
         try:
-            return await self.response_repository.create(response_create_dto)
+            return await self.response_repository.create(
+                user_id=user_id, job_id=job_id, response_create_dto=response_create_dto
+            )
         except UniqueError as e:
             raise ResponseAlreadyExistsError("Отклик уже существует в системе") from e
         except EntityNotFoundError as e:
             raise ResponseCreationError("Ошибка создания отклика") from e
 
-    async def retrieve(self, **kwargs):
+    async def retrieve(self, user_id: int, **kwargs):
         try:
-            return await self.response_repository.retrieve(**kwargs)
+            response = await self.response_repository.retrieve(**kwargs)
+            if response.user_id != user_id:
+                raise PermissionError("Недостаточно прав")
+            return response
         except EntityNotFoundError as e:
             raise ResponseNotFoundError("Отклик не найден") from e
 
     async def retrieve_many(self, **kwargs):
         return await self.response_repository.retrieve_many(**kwargs)
 
-    async def update(self, id: int, response_update_dto: ResponseUpdateSchema):
+    async def update(self, id: int, user_id: int, response_update_dto: ResponseUpdateSchema):
         try:
-            return await self.response_repository.update(
-                id=id, response_update_dto=response_update_dto
+            response = await self.response_repository.update(
+                id=id,
+                user_id=user_id,
+                response_update_dto=response_update_dto,
             )
+            if response.user_id != user_id:
+                raise PermissionError("Недостаточно прав")
+            return response
         except EntityNotFoundError as e:
             raise ResponseNotFoundError("Отклик не найден") from e
 
-    async def delete(self, id: int):
+    async def delete(self, id: int, user_id: int):
         try:
-            return await self.response_repository.delete(id=id)
+            return await self.response_repository.delete(id=id, user_id=user_id)
         except EntityNotFoundError as e:
             raise ResponseNotFoundError("Отклик не найден") from e

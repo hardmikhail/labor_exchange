@@ -18,10 +18,10 @@ async def get_current_user(
     payload = decode_access_token(token)
     if payload is None:
         raise cred_exception
-    email: str = payload.get("sub")
-    if email is None:
+    user_id: int = int(payload.get("sub"))
+    if user_id is None:
         raise cred_exception
-    user = await user_service.retrieve(email=email, include_relations=False)
+    user = await user_service.retrieve(id=user_id, include_relations=False)
     if user is None:
         raise cred_exception
     return user
