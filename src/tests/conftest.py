@@ -14,6 +14,8 @@ from sqlalchemy.orm import sessionmaker
 from config import DBSettings
 from main import app
 from repositories import UserRepository
+from repositories.job_repository import JobRepository
+from tools.fixtures.jobs import JobFactory
 from tools.fixtures.users import UserFactory
 
 env_file_name = ".env." + os.environ.get("STAGE", "test")
@@ -72,7 +74,22 @@ async def user_repository(sa_session):
     yield repository
 
 
+@pytest_asyncio.fixture(scope="function")
+async def job_repository(sa_session):
+    repository = JobRepository(session=sa_session)
+    yield repository
+
+
 # регистрация фабрик
 @pytest_asyncio.fixture(scope="function", autouse=True)
 def setup_factories(sa_session: AsyncSession) -> None:
     UserFactory.session = sa_session
+    JobFactory.session = sa_session
+
+
+@pytest_asyncio.fixture(scope="function")
+async def user_as_company(sa_session):
+    async with sa_session() as session:
+        user = UserFactory.build(id=1, is_company=False)
+        session.add(user)
+        await session.flush()

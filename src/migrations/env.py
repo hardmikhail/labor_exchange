@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
 from config import DBSettings
@@ -11,6 +12,8 @@ from storage.sqlalchemy.tables import *  # noqa
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
+load_dotenv()
+
 config = context.config
 
 env_file_name = ".env." + os.environ.get("STAGE", "dev")
