@@ -3,7 +3,6 @@ from datetime import datetime
 import factory
 
 from storage.sqlalchemy.tables import Job
-from tools.fixtures.users import UserFactory
 
 
 class JobFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -11,7 +10,7 @@ class JobFactory(factory.alchemy.SQLAlchemyModelFactory):
         model = Job
 
     id = factory.Sequence(lambda n: n)
-    user_id = factory.SubFactory(UserFactory)
+    user_id = factory.Sequence(lambda n: n)
     title = factory.Faker("sentence")
     description = factory.Faker("text")
     salary_from = factory.Faker("pydecimal", left_digits=7, right_digits=2, min_value=0)

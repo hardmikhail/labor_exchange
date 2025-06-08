@@ -64,9 +64,7 @@ class ResponseRepository(IRepositoryAsync):
 
         return responses_model
 
-    async def update(
-        self, id: int, user_id: int, response_update_dto: ResponseUpdateSchema
-    ) -> ResponseModel:
+    async def update(self, id: int, response_update_dto: ResponseUpdateSchema) -> ResponseModel:
         async with self.session() as session:
             query = select(Response).filter_by(id=id).limit(1)
             res = await session.execute(query)

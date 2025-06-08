@@ -14,4 +14,4 @@ class UserFactory(factory.alchemy.SQLAlchemyModelFactory):
     email = factory.Faker("email")
     hashed_password = factory.Faker("password")
     is_company = factory.Faker("pybool")
-    created_at = factory.LazyFunction(datetime.utcnow)
+    created_at = factory.LazyFunction(datetime.now)

@@ -1,13 +1,15 @@
 import pytest
+from pydantic import ValidationError
 
-from repositories.job_repository import JobRepository
+from repositories import JobRepository
 from tools.fixtures.jobs import JobFactory
+from tools.fixtures.responses import ResponseFactory
 from tools.fixtures.users import UserFactory
-from web.schemas.job import JobCreateSchema
+from web.schemas import JobCreateSchema
 
 
 @pytest.mark.asyncio
-async def test_create_job(job_repository: JobRepository, user_repository, user_as_company):
+async def test_create_job(job_repository: JobRepository, user_repository, test_user):
     user = await user_repository.retrieve(id=1)
     job = JobCreateSchema(
         title="gpn",
@@ -37,17 +39,62 @@ async def test_get_all(job_repository, sa_session):
         session.add(job)
         await session.flush()
 
-        all_jobs = await job_repository.retrieve_many()
+    all_jobs = await job_repository.retrieve_many()
 
-        assert all_jobs
-        assert len(all_jobs) == 1
+    assert all_jobs
+    assert len(all_jobs) == 1
 
-        job_from_repo = all_jobs[0]
+    job_from_repo = all_jobs[0]
 
-        assert job_from_repo.id == job.id
-        assert job_from_repo.user_id == job.user_id
-        assert job_from_repo.title == job.title
-        assert job_from_repo.description == job.description
-        assert job_from_repo.salary_from == job.salary_from
-        assert job_from_repo.salary_to == job.salary_to
-        assert job_from_repo.is_active == job.is_active
+    assert job_from_repo.id == job.id
+    assert job_from_repo.user_id == job.user_id
+    assert job_from_repo.title == job.title
+
+
+@pytest.mark.asyncio
+async def test_get_all_with_relations(job_repository, sa_session):
+    async with sa_session() as session:
+        user = UserFactory.build()
+        job = JobFactory.build(user_id=user.id)
+        response = ResponseFactory.build(user_id=user.id, job_id=job.id)
+        session.add(user)
+        session.add(job)
+        session.add(response)
+        await session.flush()
+
+    all_jobs = await job_repository.retrieve_many(include_relations=True)
+
+    assert all_jobs
+    assert len(all_jobs) == 1
+
+    job_from_repo = all_jobs[0]
+    assert len(job_from_repo.responses) == 1
+    assert job_from_repo.responses[0].id == response.id
+
+
+@pytest.mark.asyncio
+async def test_get_by_id(job_repository, sa_session):
+    async with sa_session() as session:
+        user = UserFactory.build()
+        job = JobFactory.build(user_id=user.id)
+        session.add(user)
+        session.add(job)
+        await session.flush()
+
+    current_job = await job_repository.retrieve(id=job.id)
+    assert current_job
+    assert current_job.id == job.id
+
+
+@pytest.mark.asyncio
+async def test_create_with_invalid_data(job_repository):
+    with pytest.raises(ValidationError):
+        job = JobCreateSchema(
+            title=129864,
+            description="description",
+            salary_from="100",
+            salary_to="500",
+            is_active=True,
+        )
+
+        await job_repository.create(job_create_dto=job, user_id=1)

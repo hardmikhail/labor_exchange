@@ -2,7 +2,6 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 
-from repositories import UserRepository
 from repositories.exceptions import UniqueError
 from tools.fixtures.jobs import JobFactory
 from tools.fixtures.users import UserFactory
@@ -11,7 +10,7 @@ from web.schemas import UserCreateSchema, UserUpdateSchema
 
 
 @pytest.mark.asyncio
-async def test_get_all(user_repository: UserRepository, sa_session):
+async def test_get_all(user_repository, sa_session):
     async with sa_session() as session:
         user = UserFactory.build()
         session.add(user)
@@ -28,7 +27,7 @@ async def test_get_all(user_repository: UserRepository, sa_session):
 
 
 @pytest.mark.asyncio
-async def test_get_all_with_relations(user_repository: UserRepository, sa_session):
+async def test_get_all_with_relations(user_repository, sa_session):
     async with sa_session() as session:
         user = UserFactory.build(is_company=True)
         job = JobFactory.build(user_id=user.id)
@@ -49,7 +48,7 @@ async def test_get_all_with_relations(user_repository: UserRepository, sa_sessio
 
 
 @pytest.mark.asyncio
-async def test_get_by_id(user_repository: UserRepository, sa_session):
+async def test_get_by_id(user_repository, sa_session):
     async with sa_session() as session:
         user = UserFactory.build()
         session.add(user)
@@ -61,7 +60,7 @@ async def test_get_by_id(user_repository: UserRepository, sa_session):
 
 
 @pytest.mark.asyncio
-async def test_create_with_valid_data(user_repository: UserRepository):
+async def test_create_with_valid_data(user_repository):
     user = UserCreateSchema(
         name="Uchpochmak",
         email="bashkort@example.com",
@@ -79,7 +78,7 @@ async def test_create_with_valid_data(user_repository: UserRepository):
 
 
 @pytest.mark.asyncio
-async def test_repository_raises_error_on_invalid_data(user_repository: UserRepository):
+async def test_repository_raises_error_on_invalid_data(user_repository):
     with pytest.raises(ValidationError):
         user = UserCreateSchema(
             name="Uchpochmak",
@@ -95,7 +94,7 @@ async def test_repository_raises_error_on_invalid_data(user_repository: UserRepo
 
 
 @pytest.mark.asyncio
-async def test_repository_rejects_duplicate_email(user_repository: UserRepository):
+async def test_repository_rejects_duplicate_email(user_repository):
     with pytest.raises(UniqueError):
         user = UserCreateSchema(
             name="Uchpochmak",
