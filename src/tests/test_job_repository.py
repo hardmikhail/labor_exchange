@@ -2,27 +2,24 @@ import pytest
 from pydantic import ValidationError
 
 from repositories import JobRepository
-from tools.fixtures.jobs import JobFactory
-from tools.fixtures.responses import ResponseFactory
-from tools.fixtures.users import UserFactory
+from tools.common import fake
 from web.schemas import JobCreateSchema
 
 
 @pytest.mark.asyncio
-async def test_create_job(job_repository: JobRepository, user_repository, test_user):
-    user = await user_repository.retrieve(id=1)
+async def test_create_job(job_repository: JobRepository, test_user):
     job = JobCreateSchema(
-        title="gpn",
-        description="gpn",
-        salary_from=1,
-        salary_to=99999,
-        is_active=True,
+        title=fake.pystr(),
+        description=fake.text(),
+        salary_from=fake.pyfloat(positive=True, left_digits=3, right_digits=2, max_value=100),
+        salary_to=fake.pyfloat(positive=True, left_digits=3, right_digits=2, min_value=100),
+        is_active=fake.pybool(),
     )
 
-    current_job = await job_repository.create(user_id=user.id, job_create_dto=job)
+    current_job = await job_repository.create(user_id=test_user.id, job_create_dto=job)
 
     assert current_job
-    assert current_job.user_id == user.id
+    assert current_job.user_id == test_user.id
     assert current_job.title == job.title
     assert current_job.description == job.description
     assert current_job.salary_from == job.salary_from
@@ -31,14 +28,7 @@ async def test_create_job(job_repository: JobRepository, user_repository, test_u
 
 
 @pytest.mark.asyncio
-async def test_get_all(job_repository, sa_session):
-    async with sa_session() as session:
-        user = UserFactory.build()
-        job = JobFactory.build(user_id=user.id)
-        session.add(user)
-        session.add(job)
-        await session.flush()
-
+async def test_get_all(job_repository, test_job):
     all_jobs = await job_repository.retrieve_many()
 
     assert all_jobs
@@ -46,55 +36,41 @@ async def test_get_all(job_repository, sa_session):
 
     job_from_repo = all_jobs[0]
 
-    assert job_from_repo.id == job.id
-    assert job_from_repo.user_id == job.user_id
-    assert job_from_repo.title == job.title
+    assert job_from_repo.id == test_job.id
+    assert job_from_repo.user_id == test_job.user_id
+    assert job_from_repo.title == test_job.title
 
 
 @pytest.mark.asyncio
-async def test_get_all_with_relations(job_repository, sa_session):
-    async with sa_session() as session:
-        user = UserFactory.build()
-        job = JobFactory.build(user_id=user.id)
-        response = ResponseFactory.build(user_id=user.id, job_id=job.id)
-        session.add(user)
-        session.add(job)
-        session.add(response)
-        await session.flush()
-
+async def test_get_all_with_relations(job_repository, test_response):
     all_jobs = await job_repository.retrieve_many(include_relations=True)
 
     assert all_jobs
     assert len(all_jobs) == 1
 
     job_from_repo = all_jobs[0]
+
     assert len(job_from_repo.responses) == 1
-    assert job_from_repo.responses[0].id == response.id
+    assert job_from_repo.responses[0].id == test_response.id
 
 
 @pytest.mark.asyncio
-async def test_get_by_id(job_repository, sa_session):
-    async with sa_session() as session:
-        user = UserFactory.build()
-        job = JobFactory.build(user_id=user.id)
-        session.add(user)
-        session.add(job)
-        await session.flush()
+async def test_get_by_id(job_repository, test_job):
+    current_job = await job_repository.retrieve(id=test_job.id)
 
-    current_job = await job_repository.retrieve(id=job.id)
     assert current_job
-    assert current_job.id == job.id
+    assert current_job.id == test_job.id
 
 
 @pytest.mark.asyncio
-async def test_create_with_invalid_data(job_repository):
+async def test_create_with_invalid_data(job_repository, test_user):
     with pytest.raises(ValidationError):
         job = JobCreateSchema(
-            title=129864,
-            description="description",
-            salary_from="100",
-            salary_to="500",
-            is_active=True,
+            title=fake.pybool(),
+            description=fake.text(),
+            salary_from=fake.pyfloat(left_digits=2, positive=False),
+            salary_to=fake.pyfloat(left_digits=2),
+            is_active=fake.pybool(),
         )
 
-        await job_repository.create(job_create_dto=job, user_id=1)
+        await job_repository.create(job_create_dto=job, user_id=test_user.id)

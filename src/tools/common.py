@@ -1,6 +1,9 @@
 from typing import TypeVar
 
+from faker import Faker
 from sqlalchemy import Table
+
+fake = Faker()
 
 T = TypeVar("T")
 
